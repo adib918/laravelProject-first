@@ -7,6 +7,7 @@ use OpenAI\Laravel\Facades\OpenAI;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\TicketController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,11 +40,19 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/auth.php';
 
 Route::post('/auth/redirect', function () {
-    return Socialite::driver('github')->redirect();
+    try {
+        return Socialite::driver('github')->redirect();
+    } catch (Exception $e) {
+        return Socialite::driver('github')->stateless()->redirect();
+    }
 })->name('login.github');
 
 Route::get('/auth/callback', function () {
-    $user = Socialite::driver('github')->user();
+    try{
+        $user = Socialite::driver('github')->user();
+    }catch(Exception $e){
+        $user = Socialite::driver('github')->stateless()->user();
+    }
     
     $user = User::firstOrCreate([
         'email' => $user->email,
@@ -56,4 +65,8 @@ Route::get('/auth/callback', function () {
     Auth::login($user);
 
     return redirect('/dashboard');
+});
+
+Route::middleware('auth')->group(function(){
+    Route::resource('ticket', TicketController::class);
 });
